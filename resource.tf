@@ -1,96 +1,62 @@
+
 terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.0"
+      version = "4.8.0"
     }
   }
 }
 
 provider "azurerm" {
-  features {}
+
+features {}
+
 }
 
-# Resource Group
+#Define the resource group (erg1)
 resource "azurerm_resource_group" "rg" {
   name     = "erg1"
-  location = "Central US"
+  location = "East US"
 }
 
-# Virtual Network 1
+# Virtual Network 1 (vnet1)
 resource "azurerm_virtual_network" "vnet1" {
   name                = "vnet1"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  address_space       = ["10.5.0.0/16"]
+  address_space       = ["10.0.0.0/16"]
 }
 
-# Virtual Network 2
+# Virtual Network 2 (vnet2)
 resource "azurerm_virtual_network" "vnet2" {
   name                = "vnet2"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  address_space       = ["10.15.0.0/16"]
+  address_space       = ["10.1.0.0/16"]
 }
 
-# Subnets
+# Subnet in vnet1
 resource "azurerm_subnet" "subnet1" {
   name                 = "subnet1"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet1.name
-  address_prefixes     = ["10.5.1.0/24"]
+  address_prefixes     = ["10.0.1.0/24"]
 }
 
+# Subnet in vnet2
 resource "azurerm_subnet" "subnet2" {
   name                 = "subnet2"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet2.name
-  address_prefixes     = ["10.15.1.0/24"]
-}
-
-# Peering between vnet1 and vnet2
-resource "azurerm_virtual_network_peering" "vnet1_to_vnet2" {
-  name                      = "vnet1-to-vnet2"
-  resource_group_name       = azurerm_resource_group.rg.name
-  virtual_network_name      = azurerm_virtual_network.vnet1.name
-  remote_virtual_network_id = azurerm_virtual_network.vnet2.id
-
-  allow_forwarded_traffic = true
-  use_remote_gateways     = false
-}
-
-resource "azurerm_virtual_network_peering" "vnet2_to_vnet1" {
-  name                      = "vnet2-to-vnet1"
-  resource_group_name       = azurerm_resource_group.rg.name
-  virtual_network_name      = azurerm_virtual_network.vnet2.name
-  remote_virtual_network_id = azurerm_virtual_network.vnet1.id
-
-  allow_forwarded_traffic = true
-  use_remote_gateways     = false
-}
-
-# SSH Public Key Resource
-resource "azurerm_ssh_public_key" "ssh" {
-  name                = "ssh_key"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  public_key          = file("/home/dilli/.ssh/id_rsa.pub")  # Replace with your actual path
-}
-
-# Public IP for VM1
-resource "azurerm_public_ip" "vm1_public_ip" {
-  name                = "vm1-public-ip"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  allocation_method   = "Static"
-  sku                 = "Standard"
+  address_prefixes     = ["10.1.1.0/24"]
 }
 
 # Network Interface for VM1
 resource "azurerm_network_interface" "vm1_nic" {
   name                = "vm1-nic"
-  resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
 
   ip_configuration {
     name                          = "internal"
@@ -103,8 +69,8 @@ resource "azurerm_network_interface" "vm1_nic" {
 # Network Interface for VM2
 resource "azurerm_network_interface" "vm2_nic" {
   name                = "vm2-nic"
-  resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
 
   ip_configuration {
     name                          = "internal"
@@ -113,7 +79,24 @@ resource "azurerm_network_interface" "vm2_nic" {
   }
 }
 
-# Virtual Machine 1 (with public IP)
+# Public IP for VM1
+resource "azurerm_public_ip" "vm1_public_ip" {
+  name                = "vm1-public-ip"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
+# SSH Public Key resource
+resource "azurerm_ssh_public_key" "ssh" {
+  name                = "ssh_key"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  public_key          = file("/home/dilli/.ssh/id_rsa.pub")  
+}
+
+# Virtual Machine 1 (public IP)
 resource "azurerm_linux_virtual_machine" "vm1" {
   name                = "vm1"
   resource_group_name = azurerm_resource_group.rg.name
